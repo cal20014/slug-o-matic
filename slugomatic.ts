@@ -15,7 +15,6 @@ export type RenameTuple = [string, string];
 const SYMBOL_TRANSLATION_MAP = {
   "&": "and",
   "+": "plus",
-  "-": "minus",
   "=": "equals",
   "<": "less than",
   ">": "greater than",
