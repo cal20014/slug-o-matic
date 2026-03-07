@@ -14,12 +14,12 @@ Deno.test("Slugomatic validateExtension throws on invalid file", () => {
   assertThrows(
     () => app.validateExtension("document.pdf"),
     Error,
-    "Unsupported file type"
+    "Unsupported file type",
   );
 });
 
 Deno.test("Slugomatic validateExtension allows valid images", () => {
   const app = new Slugomatic();
-  app.validateExtension("photo.png"); 
-  app.validateExtension("graphic.svg"); 
+  app.validateExtension("photo.png");
+  app.validateExtension("graphic.svg");
 });
