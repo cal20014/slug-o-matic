@@ -22,7 +22,7 @@ What would you like to do?
   } else {
     const format = promptFormat();
     console.log(`\nUsing format: ${format}-case\n`);
-    
+
     const app = new Slugomatic(format);
 
     switch (mode) {
@@ -80,7 +80,9 @@ function promptConfirm(message: string): boolean {
     } else if (input === "n" || input === "no") {
       confirmed = false;
     } else {
-      console.log("Invalid entry. Please enter 'y' or 'yes' to confirm, or 'n' or 'no' to cancel.");
+      console.log(
+        "Invalid entry. Please enter 'y' or 'yes' to confirm, or 'n' or 'no' to cancel.",
+      );
     }
   }
 
@@ -106,7 +108,7 @@ async function renameSingleFile(app: Slugomatic) {
     try {
       const fileName = basename(filePath);
       app.validateExtension(fileName);
-      
+
       const safeName = app.generateSafeName(fileName);
 
       if (fileName === safeName) {
@@ -195,7 +197,9 @@ async function renameFilesInDirectory(app: Slugomatic) {
           console.log(`${item.old}\n  -> ${item.new}\n`);
         }
 
-        if (promptConfirm(`\nRename these ${pendingRenames.length} files? (y/n):`)) {
+        if (
+          promptConfirm(`\nRename these ${pendingRenames.length} files? (y/n):`)
+        ) {
           console.log(`\nRenaming ${pendingRenames.length} files...\n`);
 
           for (const item of pendingRenames) {
