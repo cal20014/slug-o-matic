@@ -1,4 +1,3 @@
-import { basename, dirname, join } from "@std/path";
 import { type SlugFormat, slugify, Slugomatic } from "./slugomatic.ts";
 
 if (import.meta.main) {
@@ -106,34 +105,18 @@ async function renameSingleFile(app: Slugomatic) {
 
   if (filePath) {
     try {
-      const fileName = basename(filePath);
-      app.validateExtension(fileName);
+      const task = await app.prepareSingleFile(filePath);
 
-      const safeName = app.generateSafeName(fileName);
-
-      if (fileName === safeName) {
+      if (!task) {
         console.log("\nFile name is already safe.");
       } else {
-        const newPath = join(dirname(filePath), safeName);
-        let fileExists = false;
+        console.log(`\nPreview:\n${task.oldName}\n  -> ${task.newName}`);
 
-        try {
-          await Deno.stat(newPath);
-          fileExists = true;
-        } catch {
-        }
-
-        if (fileExists) {
-          console.warn(`\nCannot rename: ${safeName} already exists.`);
+        if (promptConfirm("\nRename this file? (y/n):")) {
+          await app.executeTasks([task]);
+          console.log("\nRenamed successfully.");
         } else {
-          console.log(`\nPreview:\n${fileName}\n  -> ${safeName}`);
-
-          if (promptConfirm("\nRename this file? (y/n):")) {
-            await Deno.rename(filePath, newPath);
-            console.log("\nRenamed successfully.");
-          } else {
-            console.log("\nOperation cancelled.");
-          }
+          console.log("\nOperation cancelled.");
         }
       }
     } catch (error) {
@@ -151,63 +134,21 @@ async function renameFilesInDirectory(app: Slugomatic) {
   if (dirChoice) {
     console.log(`\nScanning directory: ${dirChoice}\n`);
 
-    const pendingRenames: { old: string; new: string }[] = [];
-    const newNames = new Set<string>();
-
     try {
-      for await (const entry of Deno.readDir(dirChoice)) {
-        if (entry.isFile) {
-          const fileName = entry.name;
+      const tasks = await app.prepareDirectory(dirChoice);
 
-          try {
-            app.validateExtension(fileName);
-            const safeName = app.generateSafeName(fileName);
-
-            if (fileName !== safeName) {
-              if (newNames.has(safeName)) {
-                console.warn(`Collision detected: ${safeName}`);
-              } else {
-                let fileExists = false;
-                try {
-                  await Deno.stat(join(dirChoice, safeName));
-                  fileExists = true;
-                } catch {
-                }
-
-                if (fileExists) {
-                  console.warn(`Skipping: ${safeName} already exists.`);
-                } else {
-                  newNames.add(safeName);
-                  pendingRenames.push({ old: fileName, new: safeName });
-                }
-              }
-            }
-          } catch (err) {
-            console.warn(`Skipping ${fileName}: ${(err as Error).message}`);
-          }
-        }
-      }
-
-      if (pendingRenames.length === 0) {
+      if (tasks.length === 0) {
         console.log("All files are already safe or skipped.");
       } else {
-        console.log(`Preview (${pendingRenames.length} files):\n`);
+        console.log(`Preview (${tasks.length} files):\n`);
 
-        for (const item of pendingRenames) {
-          console.log(`${item.old}\n  -> ${item.new}\n`);
+        for (const task of tasks) {
+          console.log(`${task.oldName}\n  -> ${task.newName}\n`);
         }
 
-        if (
-          promptConfirm(`\nRename these ${pendingRenames.length} files? (y/n):`)
-        ) {
-          console.log(`\nRenaming ${pendingRenames.length} files...\n`);
-
-          for (const item of pendingRenames) {
-            await Deno.rename(
-              join(dirChoice, item.old),
-              join(dirChoice, item.new),
-            );
-          }
+        if (promptConfirm(`\nRename these ${tasks.length} files? (y/n):`)) {
+          console.log(`\nRenaming ${tasks.length} files...\n`);
+          await app.executeTasks(tasks);
           console.log("Directory rename complete.");
         } else {
           console.log("\nOperation cancelled.");

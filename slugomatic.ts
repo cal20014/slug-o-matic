@@ -1,4 +1,4 @@
-import { extname, join } from "@std/path";
+import { basename, dirname, extname, join } from "@std/path";
 
 export const ALLOWED_EXTENSIONS: string[] = [
   ".png",
@@ -10,7 +10,13 @@ export const ALLOWED_EXTENSIONS: string[] = [
 ];
 
 export type SlugFormat = "kebab" | "snake";
-export type RenameTuple = [string, string];
+
+export interface RenameTask {
+  oldName: string;
+  newName: string;
+  oldPath: string;
+  newPath: string;
+}
 
 const SYMBOL_TRANSLATION_MAP = {
   "&": "and",
@@ -75,38 +81,86 @@ export class Slugomatic {
     const ext = extname(filename);
     const baseName = filename.slice(0, -ext.length);
     const safeBase = slugify(baseName, this.format);
+
     if (!safeBase) return filename;
+
     return `${safeBase}${ext.toLowerCase()}`;
   }
 
-  async processDirectory(dirPath: string): Promise<void> {
-    const plannedRenames: RenameTuple[] = [];
+  async prepareSingleFile(filePath: string): Promise<RenameTask | null> {
+    const fileName = basename(filePath);
+    this.validateExtension(fileName);
+
+    const safeName = this.generateSafeName(fileName);
+    if (fileName === safeName) return null;
+
+    const newPath = join(dirname(filePath), safeName);
+
+    try {
+      await Deno.stat(newPath);
+      throw new Error(`Cannot rename: ${safeName} already exists.`);
+    } catch (err) {
+      if (!(err instanceof Deno.errors.NotFound)) throw err;
+    }
+
+    return { oldName: fileName, newName: safeName, oldPath: filePath, newPath };
+  }
+
+  async prepareDirectory(dirPath: string): Promise<RenameTask[]> {
+    const tasks: RenameTask[] = [];
+    const newNames = new Set<string>();
 
     for await (const entry of Deno.readDir(dirPath)) {
       if (entry.isFile) {
+        const fileName = entry.name;
+
         try {
-          this.validateExtension(entry.name);
-          const newName = this.generateSafeName(entry.name);
-          if (entry.name !== newName) {
-            plannedRenames.push([entry.name, newName]);
+          this.validateExtension(fileName);
+          const safeName = this.generateSafeName(fileName);
+
+          if (fileName !== safeName) {
+            if (newNames.has(safeName)) {
+              console.warn(`Collision detected: ${safeName}`);
+            } else {
+              const newPath = join(dirPath, safeName);
+              let fileExists = false;
+
+              try {
+                await Deno.stat(newPath);
+                fileExists = true;
+              } catch (err) {
+                if (!(err instanceof Deno.errors.NotFound)) {
+                  console.warn(
+                    `Error checking path: ${(err as Error).message}`,
+                  );
+                }
+              }
+
+              if (fileExists) {
+                console.warn(`Skipping: ${safeName} already exists.`);
+              } else {
+                newNames.add(safeName);
+                tasks.push({
+                  oldName: fileName,
+                  newName: safeName,
+                  oldPath: join(dirPath, fileName),
+                  newPath,
+                });
+              }
+            }
           }
-        } catch (error) {
-          console.warn(`Skipped ${entry.name}: ${(error as Error).message}`);
+        } catch (err) {
+          console.warn(`Skipping ${fileName}: ${(err as Error).message}`);
         }
       }
     }
 
-    if (plannedRenames.length === 0) {
-      console.log("\nNo files need renaming.");
-      return;
-    }
+    return tasks;
+  }
 
-    console.log(`\nFound ${plannedRenames.length} file(s) to rename:`);
-    for (const [oldName, newName] of plannedRenames) {
-      const oldPath = join(dirPath, oldName);
-      const newPath = join(dirPath, newName);
-      console.log(`Renamed: ${oldName} -> ${newName}`);
-      await Deno.rename(oldPath, newPath);
+  async executeTasks(tasks: RenameTask[]): Promise<void> {
+    for (const task of tasks) {
+      await Deno.rename(task.oldPath, task.newPath);
     }
   }
 }
