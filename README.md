@@ -1,4 +1,4 @@
-# Slug-o-matic
+# Slug-O-Matic
 
 A command-line utility built with Deno to safely format text and rename files or directories into URL-friendly slugs (kebab-case or snake_case). It includes built-in safety checks to prevent file overwrites and naming collisions.
 
