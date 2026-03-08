@@ -1,6 +1,8 @@
 # Slug-O-Matic
 
-A command-line utility built with Deno to safely format text and rename files or directories into URL-friendly slugs (kebab-case or snake_case). It includes built-in safety checks to prevent file overwrites and naming collisions.
+A command-line utility built with Deno to safely format text and rename files or
+directories into URL-friendly slugs (kebab-case or snake_case). It includes
+built-in safety checks to prevent file overwrites and naming collisions.
 
 ## Instructions for Build and Use
 
@@ -10,7 +12,8 @@ Steps to build and run:
 
 1. Install `mise`.
 2. Clone this repository.
-3. Run `mise install` in the project directory to install Deno using mise. The Deno version is in the `mise.toml` file.
+3. Run `mise install` in the project directory to install Deno using mise. The
+   Deno version is in the `mise.toml` file.
 
 To run tests:
 
