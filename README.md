@@ -4,7 +4,7 @@ A command-line utility built with Deno to safely format text and rename files or
 
 ## Instructions for Build and Use
 
-[Software Demo](Put_Your_Video_Link_Here)
+[Software Demo](https://youtu.be/QhIgDkSjHOI)
 
 Steps to build and run:
 
